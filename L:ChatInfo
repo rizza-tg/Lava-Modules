@@ -1,0 +1,56 @@
+# meta developer: @LavaModules
+
+from hikkatl.types import Message
+from .. import loader, utils
+
+@loader.tds
+class ChatInfo(loader.Module):
+    """Информация о чате"""
+    
+    strings = {
+        "name": "L:ChatInfo",
+        "result": (
+            "<b>[🌋] Информация о чате</b>\n\n"
+            "<b>• [🫟] Название:</b> <code>{}</code>\n"
+            "<b>• [🫟] ID:</b> <code>{}</code>"
+        ),
+        "err": "🚫 Ошибка получения данных",
+        "not_group": "⚠️ Эту команду можно использовать только в группах!"
+    }
+
+    async def client_ready(self, client, db):
+        self.client = client
+
+    @loader.command(ru_doc="Показать информацию о чате (работает только в группах)")
+    async def cinfo(self, message: Message):
+        """Команда для получения информации о чате"""
+        try:
+            if not message.is_group or message.is_private:
+                await utils.answer(message, self.strings["not_group"])
+                return
+            
+            await message.delete()
+            
+            chat = await message.get_chat()
+            if not hasattr(chat, "title"):
+                return
+            
+            text = self.strings["result"].format(
+                chat.title,
+                f"-100{chat.id}" if not str(chat.id).startswith("-100") else str(chat.id)
+            )
+
+            if chat.photo:
+                img = await self.client.download_profile_photo(chat, bytes)
+                await self.client.send_file(
+                    message.peer_id,
+                    img,
+                    caption=text,
+                    reply_to=utils.get_topic(message)
+                )
+            else:
+                await utils.answer(message, text)
+                
+        except:
+            await utils.answer(message, self.strings["err"])
+            await message.delete()
